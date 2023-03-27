@@ -26,7 +26,7 @@ All AWS services are created in one oth these 3 scopes.
 <summary>Video: 2 - Create an AWS account</summary>
 <br />
 
-
+Open the [AWS registration page](https://portal.aws.amazon.com/billing/signup), fill in the form and follow the instructions.
 
 </details>
 
