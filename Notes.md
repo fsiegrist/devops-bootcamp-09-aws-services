@@ -56,3 +56,52 @@ Go to the users list, click on the new admin user, select the "Security credenti
 </details>
 
 *****
+
+<details>
+<summary>Video: 4 - Regions and Availability Zones</summary>
+<br />
+
+AWS data centers are clustered in 30 regions. Each region has multiple availability zones used for replication. Whenever you create a new service you have to choose a region this service should be allocated in.
+
+</details>
+
+*****
+
+<details>
+<summary>Video: 5 - VPC - Manage Private Network on AWS</summary>
+<br />
+
+VPC stands for Virtual Private Cloud. Each region has its VPC. Each availability zone is in a subnet of the region's VPC. Each service you are starting has to be running inside a VPC. Subnets are either private (you configured firewall rules that block all the traffic from outside the VPC) or public (you firewall rules allow access from outside the VPC). Inside the VPC your service (e.g. webserver) in a public subnet can access other services (e.g. database) inside a private subnet.
+
+Services may get two IP addresses, a private one for internal communication inside the VPC, and a public one to make it accessible from the internet.
+
+Access can be configured on subnet level, or on service component level. On subnet level so called NACLs (Network Access Control Lists) are used. On instance level it is done in Security Groups. 
+
+</details>
+
+*****
+
+<details>
+<summary>Video: 6 - CIDR Blocks explained</summary>
+<br />
+
+CIDR stands for Classless Inter-Domain Routing. It specifies a subnet range. 172.31.0.0/16 for example defines an IP range starting from the IP address 172.31.0.0 and ending with 172.31.255.255. The first 16 bits (172.31.) are fixed and the rest can be changed. 
+
+**Links:** 
+- [IP Calculator](https://jodies.de/ipcalc?host=10.0.0.0&mask1=16&mask2=)
+- [Subnet Calculator](https://mxtoolbox.com/subnetcalculator.aspx)
+- [Subnet Divider](https://www.davidc.net/sites/default/subnets/subnets.html)
+
+</details>
+
+*****
+
+<details>
+<summary>Video: 7 - Introduction to EC2 Virtual Cloud Server</summary>
+<br />
+
+EC2 stands for Elastic Compute Cloud.
+
+</details>
+
+*****
