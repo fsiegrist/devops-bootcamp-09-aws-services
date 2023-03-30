@@ -161,7 +161,8 @@ docker push fsiegrist/fesi-repo:devops-bootcamp-react-nodjs-1.0
 docker login
 docker buildx build --platform linux/amd64,linux/arm64 -t fsiegrist/fesi-repo:devops-bootcamp-react-nodjs-1.0 --push .
 # if you get 
-#    ERROR: multiple platforms feature is currently not supported for docker driver. #    Please switch to a different driver (eg. "docker buildx create --use")
+#    ERROR: multiple platforms feature is currently not supported for docker driver.
+#    Please switch to a different driver (eg. "docker buildx create --use")
 # execute "docker buildx create --use" first
 ```
 
