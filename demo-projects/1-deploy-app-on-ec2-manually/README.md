@@ -14,7 +14,7 @@ Deploy Web Application on EC2 Instance (manually)
 - Deploy Docker image from private Docker repository on EC2 Instance
 
 #### Steps to Create and Configure an EC2 Instance on AWS
-**Step 1:** Go to "Services" > "Compute" > "EC2". Scroll down to the "Launch instance" section, press the "Launch instance" button and select "Launch instance". This leads you to a page where you can configure the new instance.
+**Step 1:** Login as admin user to the AWS management web console. Go to "Services" > "Compute" > "EC2". Scroll down to the "Launch instance" section, press the "Launch instance" button and select "Launch instance". This leads you to a page where you can configure the new instance.
 
 **Step2:** Enter a name (e.g. web-server) and the "Add additional tags" link. Press the "Add tag" button and enter the key-value-pair "Type" -> "web-server-with-docker".
 
@@ -33,7 +33,7 @@ Scroll down to "Key pair (login)" and click the "Create new key pair" link. Ente
 **Step 1:** SSH into the EC2 instance\
 Move the downloaded 'docker-server.pem' file into the ssh folder `~/.ssh` and restrict the file permissions 'read for you only': `chmod 400 ~/.ssh/docker-server.pem`.\
 Open the AWS web console, go to "EC2 Dashboard" > "Instances" and check the 'web-server' instance. Select the "Networking" tab below and copy the public IPv4 address. Now open a terminal on your local machine and ssh into the EC2 server as 'ec2-user':\
-`ssh -i ~/.ssh/docker-server.pem ec2-user@<public-ip-address>`.
+`ssh -i ~/.ssh/docker-server.pem ec2-user@35.156.226.244`
 
 **Step 2:** Install Docker on EC2
 Execute the following commands on the EC2 terminal:
@@ -58,7 +58,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t fsiegrist/fesi-repo:de
 
 **Step 2:** Now switch back to the EC2 terminal, login to DockerHub, pull the image and start a container from it:
 ```sh
-ssh -i ~/.ssh/docker-server.pem ec2-user@<public-ip-address>
+ssh -i ~/.ssh/docker-server.pem ec2-user@35.156.226.244
 
 docker login
 docker pull --platform linux/amd64 fsiegrist/fesi-repo:devops-bootcamp-react-nodjs-1.0
@@ -66,6 +66,6 @@ docker run -d -p 3000:3080 fsiegrist/fesi-repo:devops-bootcamp-react-nodjs-1.0
 ```
 
 **Step 3:** Make the app accessible from the browser\
-Open the AWS web console, go to "EC2 Dashboard" > "Instances" and check the 'web-server' instance. Select the "Security" tab below and click on the link for the 'security-group-docker-server'. Open the "Inbound rules" tab and press the "Edit inbound rules" button. Press "Add rule" and enter a rule of type "Custom TCP" for port 3000 with source "Anywhere IPv4". Press "Save rules".
+Open the AWS web console, go to "EC2 Dashboard" > "Instances" and check the 'web-server' instance. Select the "Security" tab below and click on the link for the 'security-group-docker-server'. Open the "Inbound rules" tab and press the "Edit inbound rules" button. Press "Add rule" and enter a rule of type "Custom TCP" for port 3000 with source "Anywhere-IPv4". Press "Save rules".
 
-Now open the browser and navigate to `http://<ec2-public-ip>:3000` to see the application in action.
+Now open the browser and navigate to `http://35.156.226.244:3000` to see the application in action.

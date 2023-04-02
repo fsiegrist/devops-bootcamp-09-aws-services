@@ -184,15 +184,15 @@ Now open the browser and navigate to `http://<ec2-public-ip>:3000` to see the ap
 <summary>Video: 8, 9, 10 - Deploy to EC2 Server from Jenkins Pipeline</summary>
 <br />
 
-After having built a Docker image containing our application and pushed it to a Docker repository, we are ready to deploy it on a server. In the deploy stage of the Jenkins pipeline we're gonna ssh into an EC2 server and execute a docker run command to pull the image and start a container running the application. To be able to do that, we have to install an SSH agent plugin and create according credentials.
+After having built a Docker image containing our application and pushed it to a Docker repository, we are ready to deploy it on a server. In the deploy stage of the Jenkins pipeline we ssh into an EC2 server and execute a docker run command to pull the image and start a container running the application. To be able to do that, we have to install an SSH agent plugin and create according credentials.
 
 ### Install SSH Agent Plugin and Create SSH Credentials
-Login to the Jenkins management web console and install the "SSH Agent" plugin. Then open the multibranch pipeline ("Dashboard" > "devops-bootcamp-multibranch-pipeline"), open the pipeline specific "Credentials", scroll down to "Stores scoped to devops-bootcamp-multibranch-pipeline" and click on the devops-bootcamp-multibranch-pipeline link and the on the "Global credentials (unrestricted)" link. Press the "Add credentials" button, select the kind "SSH Username with private key", enter an ID (e.g. ec2-server-key), the username 'ec2-user', select Private Key > Enter directly, press the "Add" button and paste the content of the `~/.ssh/docker-server.pem` file you downloaded from the EC2 server. (To copy the content on a mac without having to display it on the terminal, use `pbcopy < ~/.ssh/docker-server.pem`.) Press the "Create" button.
-
-To find out how to use the SSH Agent plugin in a Jenkinsfile, we go back to the multibranch pipeline project and click on the item "Pipeline Syntax" in the left menu. Select "sshagent: SSH Agent" in the Sample Step dropdown. The "ec2-user" is already selected (since it is the only SSH credentials username we have). Press the "Generate Pipeline Script" button and copy the example snippet.
+Login to the Jenkins management web console and install the "SSH Agent" plugin. Then open the multibranch pipeline ("Dashboard" > "devops-bootcamp-multibranch-pipeline"), open the pipeline specific "Credentials", scroll down to "Stores scoped to devops-bootcamp-multibranch-pipeline" and click on the devops-bootcamp-multibranch-pipeline link and then on the "Global credentials (unrestricted)" link. Press the "Add credentials" button, select the kind "SSH Username with private key", enter an ID (e.g. ec2-server-key), the username 'ec2-user', select "Private Key" > "Enter directly", press the "Add" button and paste the content of the `~/.ssh/docker-server.pem` file you downloaded from the EC2 server. (To copy the content on a mac without having to display it on the terminal, use `pbcopy < ~/.ssh/docker-server.pem`.) Press the "Create" button.
 
 ### Add Deploy Stage to Jenkinsfile
-Now open the Jenkinsfile in the application project (which is built in the multibranch pipeline) and add the following stage:
+To find out how to use the SSH Agent plugin in a Jenkinsfile, we go back to the multibranch pipeline project and click on the item "Pipeline Syntax" in the left menu. Select "sshagent: SSH Agent" in the Sample Step dropdown. The "ec2-user" is already selected (since it is the only SSH credentials username we have). Press the "Generate Pipeline Script" button and copy the example snippet.
+
+Now open the Jenkinsfile in the application project, which is built in the multibranch pipeline (java-maven-app) and add the following stage:
 ```groovy
 stage('Deploy Application') {
     steps {
@@ -207,12 +207,12 @@ stage('Deploy Application') {
 }
 ```
 
-The `-o StrictHostKeyChecking=no` is necessary to avoid ssh asking whether the server should be added to the known hosts.
+The option `-o StrictHostKeyChecking=no` is necessary to avoid ssh asking whether the server should be added to the known hosts.
 
 ### Comfigure EC2
 To make this work, two more things have to be done on the EC2 server:
 - To allow Jenkins to ssh into the EC2 server, we have to add the IP address of the Jenkins host (droplet) to the firewall rule restricting access via port 22.
-- To allow EC2 to pull a Docker image from our private repository on DockerHub, we have to login from EC2 to DockerHub once. This will create an entry in /home/ec2-user/.docker/config.json and keep you logged in.
+- To allow EC2 to pull a Docker image from our private repository on DockerHub, we have to login from EC2 to DockerHub once. This will create an entry in `/home/ec2-user/.docker/config.json` and keep the ec2-user logged in.
 
 And to allow accessing the application from the internet, we have to add a firewall rule opening the port 8000 from anywhere.
 
