@@ -184,6 +184,7 @@ Now open the browser and navigate to `http://<ec2-public-ip>:3000` to see the ap
 <summary>Video: 8, 9, 10 - Deploy to EC2 Server from Jenkins Pipeline</summary>
 <br />
 
+## Deploy an Application by Manually Starting a Docker Container
 After having built a Docker image containing our application and pushed it to a Docker repository, we are ready to deploy it on a server. In the deploy stage of the Jenkins pipeline we ssh into an EC2 server and execute a docker run command to pull the image and start a container running the application. To be able to do that, we have to install an SSH agent plugin and create according credentials.
 
 ### Install SSH Agent Plugin and Create SSH Credentials
@@ -198,7 +199,7 @@ stage('Deploy Application') {
     steps {
         script {
             echo 'deploying Docker image to EC2 server...'
-            def dockerCmd = 'docker run -d -p 8000:8080 fsiegrist/fesi-repo:devops-bootcamp-java-maven-app-1.0.1'
+            def dockerCmd = "docker run -d -p 8000:8080 fsiegrist/fesi-repo:devops-bootcamp-java-maven-app-${IMAGE_TAG}"
             sshagent(['ec2-server-key']) {
                 sh "ssh -o StrictHostKeyChecking=no ec2-user@<ec2-public-ip> ${dockerCmd}"
             }
@@ -215,6 +216,83 @@ To make this work, two more things have to be done on the EC2 server:
 - To allow EC2 to pull a Docker image from our private repository on DockerHub, we have to login from EC2 to DockerHub once. This will create an entry in `/home/ec2-user/.docker/config.json` and keep the ec2-user logged in.
 
 And to allow accessing the application from the internet, we have to add a firewall rule opening the port 8000 from anywhere.
+
+## Use Docker Compose for Deployment
+Usually applications do not consist of just one Docker container. As soon as multiple containers have to be managed it is easier to do that using Docker Compose. So instead of executing `docker run` commands on the deployment server, a `docker-compose.yaml` file is part of the application project (in the Git repository), copied to the deployment server and executed using Docker Compose. This section shows how to do this from a Jenkins pipeline.
+
+### Install Docker Compose on EC2
+Download Docker Compose:\
+`curl -SL https://github.com/docker/compose/releases/download/v2.17.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose`
+
+Make the docker-compose command executable:\
+`sudo chmod +x /usr/local/bin/docker-compose`
+
+Test the installation:\
+`docker-compose --version`
+
+### Create a Docker Compose File
+Add a file called `docker-compose.yaml` with the following content to the 'java-maven-app' project:
+```yaml
+version: '3.9'
+services:
+  java-maven-app:
+    image: fsiegrist/fesi-repo:devops-bootcamp-java-maven-app-${IMAGE_TAG}
+    ports:
+      - 8000:8080
+
+  postgres:
+    image: postgres:13
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD:my-pwd
+```
+The second service (container) postgres is added just for demonstration purposes.
+
+### Adjust Jenkinsfile
+Adjust the deploy stage of the application's Jenkinsfile to the following content:
+```groovy
+stage('Deploy Application') {
+    steps {
+        script {
+            echo 'deploying Docker image to EC2 server...'
+            def dockerComposeCmd = "IMAGE_TAG=${IMAGE_TAG} docker-compose -f docker-compose.yaml up -d"
+            sshagent(['ec2-server-key']) {
+                sh 'scp docker-compose.yaml ec2-user@<ec2-public-ip>:/home/ec2-user'
+                sh "ssh -o StrictHostKeyChecking=no ec2-user@35.156.226.244 ${dockerComposeCmd}"
+            }
+        }
+    }
+}
+```
+Commit and push the changes to the Git repository and start the build pipeline on Jenkins.
+
+### Extract the Logic to a Shell Script
+Add a shell script called `server-cmds.sh` with the following content to the application project:
+```sh
+#!/usr/bin/env/ bash
+
+export IMAGE_TAG=$1
+docker-compose -f docker-compose.yaml up -d
+echo "successfully started the containers using docker-compose"
+```
+
+Adjust the deploy stage of the application's Jenkinsfile to the following content:
+```groovy
+stage('Deploy Application') {
+    steps {
+        script {
+            echo 'deploying Docker image to EC2 server...'
+            def shellCmd = "bash ./server-cmds.sh ${IMAGE_TAG}"
+            sshagent(['ec2-server-key']) {
+                sh 'scp server-cmds.sh docker-compose.yaml ec2-user@<ec2-public-ip>:/home/ec2-user'
+                sh "ssh -o StrictHostKeyChecking=no ec2-user@<ec2-public-ip> ${shellCmd}"
+            }
+        }
+    }
+}
+```
+Commit and push the changes to the Git repository and start the build pipeline on Jenkins.
 
 </details>
 
