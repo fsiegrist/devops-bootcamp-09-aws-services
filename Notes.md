@@ -222,7 +222,7 @@ Usually applications do not consist of just one Docker container. As soon as mul
 
 ### Install Docker Compose on EC2
 Download Docker Compose:\
-`curl -SL https://github.com/docker/compose/releases/download/v2.17.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose`
+`sudo curl -SL https://github.com/docker/compose/releases/download/v2.17.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose`
 
 Make the docker-compose command executable:\
 `sudo chmod +x /usr/local/bin/docker-compose`
