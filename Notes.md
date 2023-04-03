@@ -259,7 +259,7 @@ stage('Deploy Application') {
             def dockerComposeCmd = "IMAGE_TAG=${IMAGE_TAG} docker-compose -f docker-compose.yaml up -d"
             sshagent(['ec2-server-key']) {
                 sh 'scp -o StrictHostKeyChecking=no docker-compose.yaml ec2-user@<ec2-public-ip>:/home/ec2-user'
-                sh "ssh -o StrictHostKeyChecking=no ec2-user@35.156.226.244 ${dockerComposeCmd}"
+                sh "ssh -o StrictHostKeyChecking=no ec2-user@<ec2-public-ip> ${dockerComposeCmd}"
             }
         }
     }

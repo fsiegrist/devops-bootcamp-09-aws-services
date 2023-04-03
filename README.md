@@ -11,3 +11,4 @@ The [exercises](./Exercises.md) of this module...
 And finally it contains the following demo projects:
 - [Deploy App on EC2 (manually)](./demo-projects/1-deploy-app-on-ec2-manually/)
 - [Deploy App on EC2 from Jenkins Pipeline (using Docker)](./demo-projects/2-deploy-app-from-jenkins-docker/)
+- [Deploy App on EC2 from Jenkins Pipeline (using Docker Compose)](./demo-projects/3-deploy-app-from-jenkins-docker-compose/)
