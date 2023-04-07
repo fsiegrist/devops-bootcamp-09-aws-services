@@ -297,3 +297,221 @@ Commit and push the changes to the Git repository and start the build pipeline o
 </details>
 
 *****
+
+<details>
+<summary>Video: 11 - Introduction to AWS CLI</summary>
+<br />
+
+Everything that can be done in the AWS web management console (UI) can be done via the AWS command line interface.
+
+### Install and configure AWS CLI
+Check the [Installation Guides](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) for your platform.
+
+On **Mac** computers just execute
+```sh
+brew update
+brew install awscli
+```
+
+### Configure ASW CLI to connect to AWS account
+We have to tell AWS CLI with which account and which user we want to connect. Get the file, that was downloaded when you created the access key for the admin user.
+
+```sh
+aws configure
+  AWS Access Key ID [None]: ....
+  AWS Secret Access Key [None]: ....
+  Default region name [None]: eu-west-3 # Paris (eu-central-1 for Frankfurt)
+  Default output format [None]: json
+```
+
+This configuration will be used for all subsequent AWS CLI commands. The configuration itself is stored in `~/.aws/config` and `~/.aws/credentials`.
+
+### Command Structure
+`aws <command> <subcommand> [options and parameters]`\
+'command': the AWS service (e.g. ec2, iam)\
+'subcommand': specifies which operation to perform
+
+E.g. the command to create a new ec2 instance looks like this:
+```sh
+aws ec2 run-instances \
+  --image-id ami-xxxxxxx \
+  --count 1 \
+  --instance-type t2.micro \
+  --key-name MyKeyPair \
+  --security-group-ids sg-xxxxxx \
+  --subnet-id subnet-xxxxxx
+```
+
+### Create a Security Group
+`aws ec2 describe-security-groups`: displays existing security groups
+`aws ec2 describe-vpcs`: displays existing VPCs; we need the property "VpcId"
+
+```sh
+aws ec2 create-security-group \
+  --group-name my-sg \
+  --description "My Security Group" \
+  --vpc-id vpc-04acd8f40d2f4b8e9
+```
+The output of this command is a JSON object holding the ID of the newly created security group.
+
+#### Create a Firewall Rule
+```sh
+aws ec2 authorize-security-group-ingress \
+  --group-id sg-....... \
+  --protocol tcp \
+  --port 22 \
+  --cidr 31.10.151.111/32
+  ```
+
+### Create a Key Pair
+```sh
+aws ec2 create-key-pair \
+  --key-name MyKpCli \
+  --query 'KeyMaterial' \
+  --output text > MyKpCli.pem
+```
+To get information about possible option values, execute `aws ec2 create-key-pair help`. The first two lines would create a key pair and return a JSON object describing it. The private key is stored in the "KeyMaterial" attribute, so we can directly query the returned JSON object to just output the value of the "KeyMaterial" attribute and redirect it into a file called "MyKpCli.pem".
+
+### Create an EC2 Instance
+`aws ec2 describe-subnets`: lists all existing subnets; copy the subnet id of the first availability zone.\
+Amazon image IDs can be found by `aws ec2 describe-images` but it is probably faster to open the management web console, start launching a new instance, select the required image and copy the ID starting with 'ami-'.
+
+Now we have all the parameters needed to create an EC2 instance:
+```sh
+aws ec2 run-instances \
+  --image-id ami-08722fffad032e569 \
+  --count 1 \
+  --instance-type t2.micro \
+  --key-name MyKpCli \
+  --security-group-ids sg-xxxxxx \
+  --subnet-id subnet-xxxxxx
+```
+
+To get information about the new instance (like the public IP address), execute\
+`aws ec2 describe-instances`
+
+Before we can ssh into the new EC2 instance, we have to restrict read-permissions of the saved .pem file:\
+`chmod 400 MyKpCli.pem`
+
+And now:\
+`ssh -i MyKpCli.pem ec2-user@<public-ec2-ip>`
+
+### Filters and Query
+When executing aws sub-commands that display information on components (e.g. describe sub-commands), we can add a 
+- `--filters` option to pick only certain components (name-values, where name is any attribute name), and a
+- `--query` option to pick specific attributes of the components.
+
+Example:
+```sh
+aws ec2 describe-instances \
+  --filters "Name=instance-type,Values=t2.micro" \
+  --query "Reservations[].Instances[].InstanceId"
+
+# query multiple attributes
+aws ec2 describe-instances \
+  --filters "Name=instance-type,Values=t2.micro" \
+  --query "Reservations[].Instances[].{ID:InstanceId, ImageId:ImageId}"
+
+# just using query (with pattern matching)
+aws ec2 describe-instances \
+  --query 'Reservations[].Instances[?InstanceType==`t2.micro`].InstanceId'
+
+# filtering multiple values
+aws ec2 describe-instances \
+  --filters "Name=instance-id,Values=ami-x0123456,ami-y0123456,ami-z0123456" \
+  --query "Reservations[].Instances[].InstanceId"
+
+# filtering for certain tags
+aws ec2 describe-instances \
+  --filters "Name=tag:Type,Values=web-server-with-docker" \
+  --query "Reservations[].Instances[].InstanceId"
+```
+
+Note that the attribute name used in the `--filtering` option is written in lower case with hyphens instead of camel-case, so InstanceType is written as instance-type.
+
+### Using the IAM Command to Create Users, Groups and Assign Permissions
+**Create a User Group:**\
+`aws iam create-group --group-name MyGroupCli`
+
+This returns a JSON object describing the newly created group. ARN stands for 'Amazon Resource Name'. It is a unique ID for AWS components.
+
+**Create a User:**\
+`aws iam create-user --user-name MyUserCli`
+
+**Add user to group:**\
+`aws iam add-user-to-group --user-name MyUserCli --group-name MyGroupCli`
+
+**Display group information:**\
+`aws iam get-group --group-name MyGroupCli`
+
+**Get the ARN of the AmazonEC2FullAccess policy:**\
+`aws iam list-policies --query 'Policies[?PolicyName==`AmazonEC2FullAccess`].Arn'`
+
+**Attach policy to group:**\
+`aws iam attach-group-policy --group-name MyGroupCli --policy-arn <policy-arn>`\
+`aws iam list-attached-group-policies --group-name MyGroupCli`
+
+### Create Credentials for new User
+**Create a password for UI login:**
+```sh
+aws iam create-login-profile \
+  --user-name MyUserCli
+  --password TopSecretInitialPassword123
+  --password-reset-required
+```
+
+Note that the account ID needed to login as MyUserCli is part of the ARN of that user:\
+`aws iam get-user --user-name MyUserCli`\
+The account ID is the number within "arn:aws:iam::664574038682:user/MyUserCli".
+
+To change the initial password on first login, the user needs the permission to do that. This permission is not part of the 'AmazonEC2FullAccess' policy. So we also have to add the 'IAMUserChangePassword' policy. Or we could create our own policy containing the required permission and assign that policy to the user group.
+
+**Create a policy:**\
+First create a JSON file with the following content (copied from the 'IAMUserChangePassword' policy looked up in the management web console under "IAM" > "Access management" > "Policies" > "IAMUserChangePassword", restricted to the user of our account only):
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:ChangePassword"
+            ],
+            "Resource": [
+                "arn:aws:iam::664574038682:user/${aws:username}"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetAccountPasswordPolicy"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+Save the file as 'changePwdPolicy.json'. Now create the policy:\
+`aws iam create-policy --policy-name changePwd --policy-document file://changePwdPolicy.json`
+
+Copy the policy ARN and attach it to the user-group as before:\
+`aws iam attach-group-policy --group-name MyGroupCli --policy-arn <policy-arn>`
+
+**Create access key and access secret key for console login:**
+`aws iam create-access-key --user-name MyUserCli`
+
+Copy the "AccessKeyId" and the "SecretAccessKey".
+
+### Switch User for Executing AWS Commands
+If you want to switch the user for executing aws commands, you can
+- execute `aws configure` again (which also overwrites the region and output format)
+- execute `aws configure set aws-access-key-id ...` and `aws configure set aws-secret_access-key ...`
+- just temporarily set environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (not changing the default user set by `aws configure`)
+
+### Delete AWD Resources
+To clean up your AWS account you can execute similar commands as the ones you used to create the components. To get a list of all delete-sub-commands that are available for a specific command, just execute\
+`aws ec2 help | grep delete` or `aws iam help | grep delete` etc.
+
+</details>
+
+*****
