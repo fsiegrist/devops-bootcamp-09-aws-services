@@ -327,9 +327,9 @@ aws configure
 This configuration will be used for all subsequent AWS CLI commands. The configuration itself is stored in `~/.aws/config` and `~/.aws/credentials`.
 
 ### Command Structure
-`aws <command> <subcommand> [options and parameters]`\
-'command': the AWS service (e.g. ec2, iam)\
-'subcommand': specifies which operation to perform
+`aws <command> <subcommand> [options and parameters]`
+- `<command>`: the AWS service (e.g. ec2, iam)
+- `<subcommand>`: specifies which operation to perform
 
 E.g. the command to create a new ec2 instance looks like this:
 ```sh
@@ -497,7 +497,7 @@ Save the file as 'changePwdPolicy.json'. Now create the policy:\
 Copy the policy ARN and attach it to the user-group as before:\
 `aws iam attach-group-policy --group-name MyGroupCli --policy-arn <policy-arn>`
 
-**Create access key and access secret key for console login:**
+**Create access key and access secret key for console login:**\
 `aws iam create-access-key --user-name MyUserCli`
 
 Copy the "AccessKeyId" and the "SecretAccessKey".
@@ -508,7 +508,7 @@ If you want to switch the user for executing aws commands, you can
 - execute `aws configure set aws-access-key-id ...` and `aws configure set aws-secret_access-key ...`
 - just temporarily set environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (not changing the default user set by `aws configure`)
 
-### Delete AWD Resources
+### Delete AWS Resources
 To clean up your AWS account you can execute similar commands as the ones you used to create the components. To get a list of all delete-sub-commands that are available for a specific command, just execute\
 `aws ec2 help | grep delete` or `aws iam help | grep delete` etc.
 
