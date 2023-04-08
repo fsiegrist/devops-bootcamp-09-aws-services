@@ -14,7 +14,7 @@ Interacting with AWS CLI
 - Create IAM resources like User, Group, Policy using the AWS CLI
 - List and browse AWS resources using the AWS CLI
 
-#### Steps to Install and configure AWS CLI
+#### Steps to install and configure AWS CLI
 **Step 1:** Install AWS CLI
 ```sh
 brew update
@@ -30,7 +30,7 @@ aws configure
   Default output format [None]: json
 ```
 
-#### Steps to Create SSH key pair
+#### Steps to create an SSH key pair
 ```sh
 aws ec2 create-key-pair \
   --key-name MyKpCli \
@@ -39,7 +39,7 @@ aws ec2 create-key-pair \
 ```
 The first two lines would create a key pair and return a JSON object describing it. The private key is stored in the "KeyMaterial" attribute, so we can directly query the returned JSON object to just output the value of the "KeyMaterial" attribute and redirect it into a file called "MyKpCli.pem".
 
-#### Steps to Create EC2 Instance using the AWS CLI
+#### Steps to create an EC2 instance
 **Step 1:** Create a security group
 ```sh
 # get the VPC id
@@ -105,9 +105,142 @@ chmod 400 MyKpCli.pem
 ssh -i MyKpCli.pem ec2-user@18.159.35.168
 ```
 
-#### Steps to Create IAM resources like User, Group, Policy using the AWS CLI
-**Step 1:** 
+#### Steps to create IAM resources like User, Group, Policy
+```sh
+# create a user group
+aws iam create-group --group-name MyGroupCli
 
+# create a user
+aws iam create-user --user-name MyUserCli
 
-#### Steps to List and browse AWS resources using the AWS CLI
-**Step 1:** 
+# add the created user to the group
+aws iam add-user-to-group --user-name MyUserCli --group-name MyGroupCli
+
+# get the ARN (Amazon Resource Name) of the AmazonEC2FullAccess policy
+aws iam list-policies --query 'Policies[?PolicyName==`AmazonEC2FullAccess`].Arn' --output text
+# => arn:aws:iam::aws:policy/AmazonEC2FullAccess
+
+# attach that policy to the new group
+aws iam attach-group-policy --group-name MyGroupCli --policy-arn arn:aws:iam::aws:policy/AmazonEC2FullAccess
+
+# create a password for the new user to login on the UI web console
+aws iam create-login-profile \
+  --user-name MyUserCli \
+  --password InitialPassword123 \
+  --password-reset-required
+```
+
+In order to login as the new 'MyUserCli' user we need the account ID. This number is part of the 'MyUserCli' user's ARN. `aws iam get-user --user-name MyUserCli --query "User.Arn" --output text` outputs `arn:aws:iam::369076538622:user/MyUserCli`. The required account ID is the number 369076538622 within that ARN.
+
+To change the initial password on first login, the user needs the permission to do that. This permission is not part of the 'AmazonEC2FullAccess' policy. We also have to add the 'IAMUserChangePassword' policy:
+```sh
+aws iam list-policies --query 'Policies[?PolicyName==`IAMUserChangePassword`].Arn' --output text
+# => arn:aws:iam::aws:policy/IAMUserChangePassword
+
+aws iam attach-group-policy --group-name MyGroupCli --policy-arn arn:aws:iam::aws:policy/IAMUserChangePassword
+```
+
+Or we could create our own policy containing the required permission and assign that policy to the user group.
+
+**Create a policy:**\
+First create a JSON file with the following content (copied from the 'IAMUserChangePassword' policy looked up in the management web console under "IAM" > "Access management" > "Policies" > "IAMUserChangePassword", restricted to the user of our account only):
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:ChangePassword"
+            ],
+            "Resource": [
+                "arn:aws:iam::369076538622:user/${aws:username}"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetAccountPasswordPolicy"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+Save the file as 'changePwdPolicy.json'. Now create the policy:
+```sh
+aws iam create-policy \
+  --policy-name changePwd \
+  --policy-document file://changePwdPolicy.json
+```
+
+Copy the policy ARN from the output of the last command and attach it to the user-group as before:
+```sh
+aws iam attach-group-policy \
+  --group-name MyGroupCli \
+  --policy-arn arn:aws:iam::369076538622:policy/changePwd
+```
+
+Now we can login with the account ID '369076538622' as user 'MyUserCli' and the initial password 'InitialPassword123'. And we can change the initial password as required.
+
+**Create access key and access secret key for console login:**
+Let's also create an access key id and a secret access key for the new user, which he can use for login from the command line (e.g. to execute AWS CLI commands). The following command creates both an access key id and a secret access key and stores them in a local file called 'MyUserCli_AccessKey.json':
+```sh
+aws iam create-access-key \
+  --user-name MyUserCli \
+  --query "AccessKey.{ACCESS_KEY_ID:AccessKeyId, SECRET_ACCESS_KEY:SecretAccessKey}" > MyUserCli_AccessKey.json
+```
+
+**Switch user for executing AWS CLI commands:**\
+If you want to switch the user for executing AWS CLI commands, you can
+- execute `aws configure` again (which also overwrites the region and output format)
+- execute `aws configure set aws-access-key-id ...` and `aws configure set aws-secret_access-key ...` only
+- just temporarily set the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (not changing the default user set by `aws configure`)
+
+#### AWS CLI commands to list and browse AWS resources
+To get a list of all ec2 'describe' sub-commands execute
+```sh
+aws ec2 help | grep describe
+# get more information on a specific sub-command
+aws ec2 describe-instances help
+```
+
+For the iam service the listing/browsing sub-commands start with 'get-':
+```sh
+aws iam help | grep get
+aws iam get-user help
+```
+
+When executing aws sub-commands that display information on components (e.g. describe sub-commands), we can add a 
+- `--filters` option to pick only certain components (name-values, where name is any attribute name), and a
+- `--query` option to pick specific attributes of the components.
+
+Note that the attribute name used in the `--filtering` option is written in lower case with hyphens instead of camel-case, so InstanceType is written as instance-type.
+
+Examples:
+```sh
+aws ec2 describe-instances \
+  --filters "Name=instance-type,Values=t2.micro" \
+  --query "Reservations[].Instances[].InstanceId"
+
+# query multiple attributes
+aws ec2 describe-instances \
+  --filters "Name=instance-type,Values=t2.micro" \
+  --query "Reservations[].Instances[].{ID:InstanceId, ImageId:ImageId}"
+
+# just using query (with pattern matching)
+aws ec2 describe-instances \
+  --query 'Reservations[].Instances[?InstanceType==`t2.micro`].InstanceId'
+
+# filtering multiple values
+aws ec2 describe-instances \
+  --filters "Name=instance-id,Values=ami-x0123456,ami-y0123456,ami-z0123456" \
+  --query "Reservations[].Instances[].InstanceId"
+
+# filtering for certain tags
+aws ec2 describe-instances \
+  --filters "Name=tag:Type,Values=web-server-with-docker" \
+  --query "Reservations[].Instances[].InstanceId"
+```
+
+More examples of 'describe' and 'get' sub-commands can be found in the above steps of creating an EC2 instance and a user, group, policy and credentials.
