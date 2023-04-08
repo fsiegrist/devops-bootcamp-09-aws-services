@@ -455,14 +455,12 @@ This returns a JSON object describing the newly created group. ARN stands for 'A
 **Create a password for UI login:**
 ```sh
 aws iam create-login-profile \
-  --user-name MyUserCli
-  --password TopSecretInitialPassword123
+  --user-name MyUserCli \
+  --password TopSecretInitialPassword123 \
   --password-reset-required
 ```
 
-Note that the account ID needed to login as MyUserCli is part of the ARN of that user:\
-`aws iam get-user --user-name MyUserCli`\
-The account ID is the number within "arn:aws:iam::664574038682:user/MyUserCli".
+In order to login as the new 'MyUserCli' user we need the account ID. This number is part of the 'MyUserCli' user's ARN. `aws iam get-user --user-name MyUserCli` displays the user data where we find the ARN "arn:aws:iam::664574038682:user/MyUserCli" containing the account ID 664574038682.
 
 To change the initial password on first login, the user needs the permission to do that. This permission is not part of the 'AmazonEC2FullAccess' policy. So we also have to add the 'IAMUserChangePassword' policy. Or we could create our own policy containing the required permission and assign that policy to the user group.
 
