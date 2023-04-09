@@ -205,8 +205,11 @@ aws ec2 help | grep describe
 aws ec2 describe-instances help
 ```
 
-For the iam service the listing/browsing sub-commands start with 'get-':
+For the iam service the listing/browsing sub-commands start with 'list-' or 'get-':
 ```sh
+aws iam help | grep list
+aws iam list-policies help
+
 aws iam help | grep get
 aws iam get-user help
 ```
@@ -244,3 +247,37 @@ aws ec2 describe-instances \
 ```
 
 More examples of 'describe' and 'get' sub-commands can be found in the above steps of creating an EC2 instance and a user, group, policy and credentials.
+
+#### Optional: Delete all the components and resources created above
+```sh
+aws iam list-access-keys --user-name MyUserCli --query "AccessKeyMetadata[].AccessKeyId" --output text
+# => AKIAVL3VNBT7H3WTEBPQ
+aws iam delete-access-key --user-name MyUserCli --access-key-id AKIAVL3VNBT7H3WTEBPQ
+
+aws iam list-policies --query 'Policies[?PolicyName==`changePwd`].Arn' --output text
+# => arn:aws:iam::369076538622:policy/changePwd
+aws iam delete-policy --policy-arn arn:aws:iam::369076538622:policy/changePwd
+
+aws iam delete-login-profile --user-name MyUserCli
+
+aws iam remove-user-from-group --user-name MyUserCli --group-name MyGroupCli
+aws iam delete-user --user-name MyUserCli
+
+aws iam detach-group-policy --group-name MyGroupCli --policy-arn arn:aws:iam::aws:policy/IAMUserChangePassword
+aws iam detach-group-policy --group-name MyGroupCli --policy-arn arn:aws:iam::aws:policy/AmazonEC2FullAccess
+aws iam delete-group --group-name MyGroupCli
+
+# ---
+
+aws ec2 describe-instances --filter "Name=key-name,Values=MyKpCli" --query "Reservations[].Instances[].InstanceId" --output text
+# => i-076b3a9afd65e9c42
+aws ec2 terminate-instances --instance-ids i-076b3a9afd65e9c42
+
+aws ec2 describe-security-groups --filters "Name=group-name,Values=devops-bootcamp-sg" --query "SecurityGroups[].GroupId" --output text
+# => sg-058bdb4fd0f2399ea
+aws ec2 delete-security-group --group-id sg-058bdb4fd0f2399ea
+
+aws ec2 describe-key-pairs --filters "Name=key-name,Values=MyKpCli" --query "KeyPairs[].KeyPairId" --output text
+# => key-0fc2afb29f74b70b9
+aws ec2 delete-key-pair --key-pair-id key-0fc2afb29f74b70b9
+```
