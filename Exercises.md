@@ -224,14 +224,14 @@ aws ec2 describe-instances \
 ******
 
 <details>
-<summary>Exercise 5: SSH into the server and install Docker on it</summary>
+<summary>Exercise 5: SSH into the server and install Docker and Docker-Compose on it</summary>
 <br />
 
 **Tasks:**
 
 Once the EC2 instance is created successfully, you want to prepare the server to run Docker containers. So you:
 - ssh into the server and
-- install Docker on it to run the dockerized application later
+- install Docker and Docker-Compose on it to run the dockerized application later
 
 **Steps to solve the tasks:**\
 **Step 1:** SSH into EC2
@@ -250,6 +250,14 @@ sudo systemctl start docker
 
 # allow ec2-user to run docker commands without sudo by adding it to docker group
 sudo usermod -aG docker ec2-user
+
+# install docker compose
+sudo curl -SL https://github.com/docker/compose/releases/download/v2.17.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+
+# test the installation
+docker-compose --version
 ```
 
 </details>
@@ -273,10 +281,19 @@ First:
 
 The reason is you want to have the whole configuration for starting the docker container in a file, in case you need to make changes to that, instead of a plain docker command with parameters. Also, in case you add a database later.
 
-Use repository: https://gitlab.com/devops-bootcamp3/node-project
+Use repository: https://github.com/fsiegrist/devops-bootcamp-node-project
 
 **Steps to solve the tasks:**\
-
+**Step 1:** Add docker-compose.yaml\
+Add a file called `docker-compose.yaml` with the following content to the root folder of the NodeJS project:
+```sh
+version: '3.9'
+services:
+    nodejs-app:
+      image: fsiegrist/fesi-repo:devops-bootcamp-node-project-${IMAGE_TAG}
+      ports:
+        - 3000:3000
+```
 
 </details>
 
@@ -288,10 +305,78 @@ Use repository: https://gitlab.com/devops-bootcamp3/node-project
 
 **Tasks:**
 
-- Complete the previous pipeline by adding a deployment step for your previous NodeJS project with docker-compose.
+- Complete the pipeline of the exercises in the previous module 08 ("Build Automation & CI/CD with Jenkins") by adding a deployment step for your previous NodeJS project with docker-compose.
 
 **Steps to solve the tasks:**\
+**Step 1:** Create SSH credentials in Jenkins
+- Login to the Jenkins management web console and install the "SSH Agent" plugin if it isn't already installed.
+- Open "Dashboard" > "Manage Jenkins" > "Manage Credentials" and click on the domain "(global)" in the "Stores scoped to Jenkins" section.
+- Press the "Add credentials" button.
+- Select the kind "SSH Username with private key", enter the ID 'ec2-server-key', the username 'ec2-user', select "Private Key" > "Enter directly", press the "Add" button and paste the content of the `WebServerKeyPair.pem` file you downloaded from the EC2 server. (To copy the content on a mac without having to display it on the terminal, use `pbcopy < WebServerKeyPair.pem`.) Press the "Create" button.
 
+**Step 2:** Open port 22 on EC2 server from Jenkins IP\
+To allow Jenkins to ssh into the EC2 server, we have to add the IP address of the Jenkins host (64.225.104.226) to the firewall rule restricting access via port 22.
+```sh
+aws ec2 authorize-security-group-ingress \
+  --group-id sg-0a6a9345d15c51f5e \
+  --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges="[{CidrIp=64.225.104.226/32,Description='SSH access from Jenkins'}]"
+```
+
+**Step 3:** Login to Docker Hub\
+To allow EC2 to pull a Docker image from our private repository on DockerHub, we have to login from EC2 to DockerHub once. This will create an entry in `/home/ec2-user/.docker/config.json` and keep the ec2-user logged in.
+```sh
+ssh -i WebServerKeyPair.pem ec2-user@3.122.205.189
+docker login
+  Username: fsiegrist
+  Password: ***
+  Login Succeeded
+```
+
+**Step 4:** Add deploy stage to Jenkinsfile\
+Add the following snippets to the Jenkinsfile of the NodeJS project:
+```groovy
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(name: 'deploy', defaultValue: false, description: 'Deploy the application on the EC2 server.') 
+    }
+
+    stages {
+        ...
+        stage('Build and Push Docker Image') {
+            ...
+        }
+        stage('Deploy to EC2') {
+            when {
+                expression {
+                    params.deploy
+                }
+            }
+            steps {
+                script {
+                    echo 'deploying Docker image to EC2 server...'
+                    
+                    def dockerComposeCmd = "IMAGE_TAG=${IMAGE_VERSION} docker-compose up -d"
+                    def ec2Instance = "ec2-user@3.122.205.189"
+
+                    sshagent(['ec2-server-key']) {
+                        sh "scp -o StrictHostKeyChecking=no docker-compose.yaml ${ec2Instance}:/home/ec2-user"
+                        sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} ${dockerComposeCmd}"
+                    }
+                }
+            }
+        }
+        stage('Commit Version Update') {
+            ...
+        }
+    }
+}
+```
+
+Commit and push the changes to the repository. Switch to Jenkins and trigger the "node-project-pipeline". Trigger it a second time clicking on "Build with Parameters" and checking the "deploy" flag to include the new deploy stage.
+
+Switch to the EC2 instance (ssh into it) and check with `docker ps` whether the nodejs-app container is running. 
 
 </details>
 
