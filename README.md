@@ -5,7 +5,7 @@
 This project contains notes related to the videos and exercises in Module 09 "AWS Services" of Nana Janashia's [DevOps Bootcamp](https://www.techworld-with-nana.com/devops-bootcamp).
 
 ### Exercises
-The [exercises](./Exercises.md) of this module...
+The node.js application the [exercises](./Exercises.md) of this module are partially based on is available in the GitHub repository [devops-bootcamp-node-project](https://github.com/fsiegrist/devops-bootcamp-node-project).
 
 ### Demo Projects
 And finally it contains the following demo projects:
