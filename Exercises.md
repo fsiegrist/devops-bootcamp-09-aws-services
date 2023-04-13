@@ -491,7 +491,7 @@ pipeline {
 **Step 2:** Add webhook on GitHub to trigger pipeline automatically\
 Log in to your GitHub account, go to your project/repository page and open "Settings" > "Webhooks" and press the "Add webhook" button. Enter the "Payload URL" `http://64.225.104.226:8080/github-webhook/` (Jenkins) and press the "Add webhook" button.
 
-**Step 3:** Configure Jenkins pipeline to trigger a build on GitHub webhook calls
+**Step 3:** Configure Jenkins pipeline to trigger a build on GitHub webhook calls\
 Since this is a simple pipeline project (not a multi-branch pipeline), it is sufficient to do the following: Go to the Jenkins admin web console and open the pipeline project (`node-project-pipeline`), open the configuration and scroll down to the "Build Triggers" section. Check the "GitHub hook trigger for GITScm polling" checkbox and press the "Save" button.
 
 To prevent Jenkins from triggering a build upon automatic version bump commits by Jenkins itself, go to the pipeline configuration and scroll down to "Additional Behaviours" in the Git configuration. Click the "Add" dropdown and choose "Polling ignores commits from certain users" and enter the username of the committer to be ignored for triggering a build (`jenkins` in our case).
