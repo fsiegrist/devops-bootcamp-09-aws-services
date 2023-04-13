@@ -339,7 +339,7 @@ pipeline {
     agent any
 
     parameters {
-        booleanParam(name: 'deploy', defaultValue: false, description: 'Deploy the application on the EC2 server.') 
+        booleanParam(name: 'deploy', defaultValue: true, description: 'Deploy the application on the EC2 server.') 
     }
 
     stages {
@@ -426,7 +426,7 @@ pipeline {
     agent any
 
     parameters {
-        booleanParam(name: 'deploy', defaultValue: false, description: 'Deploy the application on the EC2 server.') 
+        booleanParam(name: 'deploy', defaultValue: true, description: 'Deploy the application on the EC2 server.') 
     }
 
     stages {
@@ -488,8 +488,11 @@ pipeline {
 }
 ```
 
-**Step 2:** Add webhook to trigger pipeline automatically\
-Since this is a simple pipeline project (not a multi-branch pipeline), we don't need a webhook. It is sufficient to do the following: Go to the Jenkins admin web console and open the pipeline project (`node-project-pipeline`), open the configuration and scroll down to the "Build Triggers" section. Check the "GitHub hook trigger for GITScm polling" checkbox and press the "Save" button.
+**Step 2:** Add webhook on GitHub to trigger pipeline automatically\
+Log in to your GitHub account, go to your project/repository page and open "Settings" > "Webhooks" and press the "Add webhook" button. Enter the "Payload URL" `http://64.225.104.226:8080/github-webhook/` (Jenkins) and press the "Add webhook" button.
+
+**Step 3:** Configure Jenkins pipeline to trigger a build on GitHub webhook calls
+Since this is a simple pipeline project (not a multi-branch pipeline), it is sufficient to do the following: Go to the Jenkins admin web console and open the pipeline project (`node-project-pipeline`), open the configuration and scroll down to the "Build Triggers" section. Check the "GitHub hook trigger for GITScm polling" checkbox and press the "Save" button.
 
 </details>
 
