@@ -392,7 +392,16 @@ After executing the Jenkins pipeline successfully, the application is deployed, 
 - Configure EC2 security group to access your application from browser (using AWS CLI)
 
 **Steps to solve the tasks:**\
+**Step 1:** Open port 3000 in security group to make app accessible from all IP addresses
+```sh
+aws ec2 authorize-security-group-ingress \
+  --group-id sg-0a6a9345d15c51f5e \
+  --protocol tcp \
+  --port 3000 \
+  --cidr 0.0.0.0/0
+```
 
+Now open a browser and navigate to [http://3.122.205.189:3000/](http://3.122.205.189:3000/) to see the application in action.
 
 </details>
 
@@ -410,7 +419,77 @@ Your team members are creating branches to add new features to the application o
 - Add webhook to trigger pipeline automatically
 
 **Steps to solve the tasks:**\
+**Step 1:** Add branch based logic to Jenkinsfile\
+Enhance the pipeline stages with a `when` expression evaluating the current branch:
+```groovy
+pipeline {
+    agent any
 
+    parameters {
+        booleanParam(name: 'deploy', defaultValue: false, description: 'Deploy the application on the EC2 server.') 
+    }
+
+    stages {
+        stage('Bump Version') {
+            // only execute this stage for the master/main branch
+            when {
+                expression {
+                    return env.GIT_BRANCH == "main"
+                }
+            }
+            steps {
+                script {
+                    bumpNpmVersion('app', 'patch')
+                }
+            }
+        }
+        stage('Run Tests') {
+            // run the tests for every branch
+            steps {
+                script {
+                    runNpmTests('app')
+                }
+            }
+        }
+        stage('Build and Push Docker Image') {
+            // only execute this stage for the master/main branch
+            when {
+                expression {
+                    return env.GIT_BRANCH == "main"
+                }
+            }
+            steps {
+                buildAndPublishImage("fsiegrist/fesi-repo:devops-bootcamp-node-project-${IMAGE_VERSION}")
+            }
+        }
+        stage('Deploy to EC2') {
+            // only execute this stage for the master/main branch and if the respective flag is set
+            when {
+                expression {
+                    return env.GIT_BRANCH == "main" && params.deploy
+                }
+            }
+            steps {
+                ...
+            }
+        }
+        stage('Commit Version Update') {
+            // only execute this stage for the master/main branch
+            when {
+                expression {
+                    return env.GIT_BRANCH == "main"
+                }
+            }
+            steps {
+                ...
+            }
+        }
+    }
+}
+```
+
+**Step 2:** Add webhook to trigger pipeline automatically\
+Since this is a simple pipeline project (not a multi-branch pipeline), we don't need a webhook. It is sufficient to do the following: Go to the Jenkins admin web console and open the pipeline project (`node-project-pipeline`), open the configuration and scroll down to the "Build Triggers" section. Check the "GitHub hook trigger for GITScm polling" checkbox and press the "Save" button.
 
 </details>
 
